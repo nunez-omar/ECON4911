@@ -1,0 +1,329 @@
+---
+title: "The Inflation Reduction Act With a Side of Greenium"
+author:
+- Omar Nuñez
+- Columbia University
+date: "`r format(Sys.Date(), '%Y %B %d')`"
+output:
+  html_document:
+    df_print: paged
+  keep_tex: true
+  toc: true
+  bibliography: cits.bib
+  csl: apa.csl
+  word_document: default
+  pdf_document: null
+header-includes:
+- \usepackage{setspace}\doublespacing
+- \usepackage{indentfirst}
+- \usepackage{mdframed}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+\begin{mdframed}[backgroundcolor=gray!20]
+        \textbf{Abstract}
+        
+\noindent\hrulefill
+
+I examine corporate green bond yields before and after The Inflation Reduction Act to determine the existence of a greenium. Since 2014, the green bond market has experienced steady growth fueled by environmentally conscious investor demand, partly in response to government inaction. Nevertheless, the passage of The Inflation Reduction Act of 2022 marks the single largest investment in energy and climate in American history. Comparing green bonds to conventional bonds, I demonstrate that following the enactment of the Reduction Act, corporations gain access to cheaper capital for climate risk mitigation through green bonds.[@001]
+\end{mdframed}
+
+\tableofcontents
+\noindent\hrulefill
+\newpage
+
+# 1. Introduction
+
+ \setstretch{1.8}
+\setlength\parindent{25pt} A greenium represents an investor's willingness to pay for "green" assets. The increase in adverse conditions stemming from climate change has prompted investors to categorize investment securities, particularly stocks and bonds, into two colors: green or brown. Green assets, representing environmentally responsible investments, incur higher costs and typically yield lower returns compared to brown assets. The green investor is motivated by non-pecuniary factors when considering these underperforming assets. In other words, the green investor is willing to receive a lesser return from an asset so long as the investment made contributes to the abatement or mitigation of some climate risk. A company transitioning from brown to green incurs costs to address these externalities, resulting in lower profits compared to a brown company that does not invest in abatement or mitigation. Issuing bonds is a primary method corporations use to finance such projects. Green companies and brown companies that undertake 'green' projects benefit from a lower cost of capital because their investors are willing to accept a lower interest rate. Given that corporations are primarily driven by financial motives, access to cheaper capital may incentivize them to prioritize environmental responsibility. The discrepancy between the returns for green and brown investors or the costs of capital for companies is referred to as the greenium.
+
+\setlength\parindent{25pt}The Inflation Reduction Act, enacted on August 16, 2022, represents the single largest investment in energy and climate in American history. The act aims to incentivize both companies and consumers to transition to 'green' practices by lowering the cost of cleaner energy and creating a market for green technologies through tax incentives. These tax credits have the potential to stimulate the 'green' securities market by incentivizing companies to undertake more green projects in response to increased demand for green products. The Reduction Act provides a way for companies in industries such as oil and gas, which do not qualify to issue green bonds, to eventually become eligible by investing in renewable technologies for those industries.   For the real estate industry, the Act provides tax deductions for green building developments and efficiency to a maximum of $250,000. 
+
+
+# 2. Methodology
+
+ldf;kvcmepfvcmwpvmwprvnv
+```{r echo=FALSE, results='hide',message=FALSE}
+library(openxlsx)
+library(tidyverse)
+```
+
+
+```{r echo=FALSE, results='hide',message=FALSE}
+# reading in the files and changes to Date type
+Green_Bonds <- read.xlsx("/Users/omn/Downloads/values.xlsx")
+Green_Bonds$Issue.Date  <- as.Date(Green_Bonds$Issue.Date , format="%m/%d/%Y")
+Green_Bonds$Maturity  <- as.Date(Green_Bonds$Maturity , format="%m/%d/%Y")
+Green_Bonds$time <- ifelse(Green_Bonds$Issue.Date > "2022-08-16",1,0)
+```
+
+```{r echo=FALSE, results='hide',message=FALSE}
+# reading in brown bonds and changes to Date type
+Brown_Bonds <- read.xlsx("/Users/omn/Desktop/Val_brownB.xlsx")
+Brown_Bonds$Issue.Date  <- as.Date(Brown_Bonds$Issue.Date , format="%m/%d/%Y")
+Brown_Bonds$Maturity  <- as.Date(Brown_Bonds$Maturity , format="%m/%d/%Y")
+Brown_Bonds$time <- ifelse(Brown_Bonds$Issue.Date > "2022-08-16",1,0)
+```
+
+```{r echo=FALSE, results='hide',message=FALSE}
+#subset Green Bonds before IRA
+pre_iraGB <- subset(Green_Bonds, Issue.Date > "2021-01-16" & Issue.Date < "2022-08-16")
+relocate(pre_iraGB, Issue.Date, .after = Yield.at.Issue)
+pre_iraGB <- distinct(pre_iraGB)
+```
+
+```{r echo=FALSE, results='hide',message=FALSE}
+#data pre-processing
+pre_iraGB <- select(pre_iraGB, Issuer, Ticker, Yield.at.Issue, Amt.Issued, Issue.Date, Cpn, Maturity, BBG.Composite, time)
+
+pre_iraGB$log.Issued <- log(pre_iraGB$Amt.Issued)
+
+pre_iraGB <- rename(pre_iraGB, Issuer = Issuer, Issue.yield = Yield.at.Issue , BBG = BBG.Composite, Cpn = Cpn, log.Issued = log.Issued, Issue.Date = Issue.Date, Maturity= Maturity)
+```
+
+```{r echo=FALSE, results='hide',message=FALSE}
+#subset Brown bonds pre-IRA
+pre_iraBB <- filter(Brown_Bonds, Issue.Date > "2021-01-16" & Issue.Date < "2022-08-16")
+```
+
+```{r echo=FALSE, results='hide',message=FALSE}
+#converting to issue amounts to log
+pre_iraBB$log.Issued <- log(pre_iraBB$Amt.Issued)
+```
+
+```{r echo=FALSE, results='hide',message=FALSE}
+#data processing-column name changes
+pre_iraBB <- select(pre_iraBB, Issuer.Name, Ticker, Yield.at.Issue, Amt.Issued, Issue.Date, Cpn, Maturity, BBG.Composite, log.Issued, time)
+
+pre_iraBB <- rename(pre_iraBB, Issuer = Issuer.Name, Issue.yield = Yield.at.Issue , BBG = BBG.Composite, Cpn = Cpn, Issue.Date = Issue.Date)
+distinct(pre_iraBB)
+```
+
+```{r echo=FALSE, results='hide',message=FALSE}
+#placing indicators
+pre_iraGB$type <- "Green"
+pre_iraBB$type <- "Brown"
+```
+
+```{r echo=FALSE, results='hide',message=FALSE}
+# merging green and brown datasets/ excluding duplicates
+preMatch <- rbind(pre_iraGB, pre_iraBB)
+preMatch <- group_by(preMatch, BBG, Ticker)
+df_unique <- distinct(preMatch)
+df_unique$type <- factor(df_unique$type)
+df_unique$treated <- ifelse(df_unique$type == "Green",1,0)
+```
+
+
+```{r}
+library(MatchIt)
+# nearest neighbor matching
+ID <- (df_unique$Issue.Date - df_unique$Issue.Date)
+
+m.post1 <- matchit(treated ~ log.Issued + Maturity + Cpn 
++ ID, data = df_unique, method = "nearest", 
+distance = "mahalanobis")
+
+summary(m.post1)
+```
+```{r}
+plot(summary(m.post1), abs = F)
+```
+
+
+```{r echo=FALSE, results='hide',message=FALSE}
+matched_data <- match.data(m.post1)
+matched_data$after_act <- 0
+matched_data$did <- matched_data$time * matched_data$treated
+
+```
+
+```{r}
+# Filter the data where 'treated' column equals 1
+filt_dataPG <- matched_data$Issue.yield[matched_data$treated == 1]
+
+# Filter the data where 'treated' column equals 0
+filtered_dataPB <- matched_data$Issue.yield[matched_data$treated == 0]
+density_estPB <- density(filtered_dataPB)
+
+# Plot the density estimate
+plot(density_estPB, main = "Kernel Density Estimate for Issue Yield (Treated == 0)", xlab = "Issue Yield", ylab = "Density")
+
+density_estPG <- density(filt_dataPG)
+
+# Plot the density estimate
+plot(density_estPG, main = "Kernel Density Estimate for Issue Yield (Treated == 1)", xlab = "Issue Yield", ylab = "Density")
+
+plot_range <- range(density_estPG$x, density_estPB$x)
+
+# Calculate the difference in density estimates
+diff_dens <- density_estPG$y - density_estPB$y
+
+# Plot the difference in density estimates
+plot(density_estPB$x, diff_dens, type = "l", col = "blue", main = "Difference in Density Estimate for Yield at Issue", xlab = expression("Yield" ^ green - "Yield"^ conventional), ylab = "Density Difference", xlim = plot_range)
+
+abline(h = 0, col = "red", lty = 2)  # Add horizontal line at y = 0 for reference
+```
+
+```{r}
+#T-test for pre-IRA
+t.test(data = matched_data, Issue.yield ~ treated, unequal = FALSE)
+```
+
+
+```{r echo=FALSE, results='hide',message=FALSE}
+#subset Green Bonds After IRA
+post_Green <- filter(Green_Bonds, Issue.Date > "2022-08-16" & Issue.Date < "2024-03-16")
+
+relocate(post_Green, Issue.Date, .after = Yield.at.Issue)
+```
+```{r echo=FALSE, results='hide',message=FALSE}
+#data pre-processing POst-IRA
+post_Green <- select(post_Green, Issuer, Ticker, Yield.at.Issue, Amt.Issued, Issue.Date, Cpn, Maturity, BBG.Composite, time)
+
+post_Green$log.Issued <- log(post_Green$Amt.Issued)
+
+post_Green <- rename(post_Green, Issuer = Issuer, Issue.yield = Yield.at.Issue , BBG = BBG.Composite)
+```
+
+```{r echo=FALSE, results='hide',message=FALSE}
+#subset Brown bonds post-IRA
+post_Brown <- filter(Brown_Bonds, Issue.Date > "2022-08-16" & Issue.Date < "2024-03-16")
+
+relocate(post_Brown, Issue.Date, .after = Yield.at.Issue)
+```
+
+
+```{r echo=FALSE, results='hide',message=FALSE}
+post_Brown$log.Issued <- log(post_Brown$Amt.Issued)
+```
+
+```{r echo=FALSE, results='hide',message=FALSE}
+post_Brown <- select(post_Brown, Issuer.Name, Ticker, Yield.at.Issue, Amt.Issued, Issue.Date, Cpn, Maturity, BBG.Composite, log.Issued, time)
+
+post_Brown <- rename(post_Brown, Issuer = Issuer.Name, Issue.yield = Yield.at.Issue , BBG = BBG.Composite, Cpn = Cpn, Issue.Date = Issue.Date)
+
+```
+
+```{r echo=FALSE, results='hide',message=FALSE}
+#placing indicators
+post_Green$type <- "Green"
+post_Brown$type <- "Brown"
+```
+
+```{r echo=FALSE, results='hide',message=FALSE}
+#merging post-IRA datasets
+postMatch <- rbind(post_Green, post_Brown)
+postMatch <- group_by(postMatch, BBG, Ticker)
+pM_unique <- distinct(postMatch)
+pM_unique$type <- factor(pM_unique$type)
+pM_unique$treated <- ifelse(pM_unique$type == "Green",1,0)
+```
+
+```{r}
+library(MatchIt)
+
+#trying to calculate the difference in issuance days from matched green and brown bonds
+
+calculate_difference_issue_days <- function(data) {
+    # Calculate the difference in issue days between green and brown bonds
+  difference_issue_days <- data %>%
+    group_by(Issuer) %>%
+    summarize(difference = max(Issue_date[treated == 1], na.rm = TRUE) - 
+                             max(Issue_date[treated == 0], na.rm = TRUE))
+  
+  return(difference_issue_days)
+}
+
+#matching nearrest neighbor
+m.post <- matchit(treated ~ log.Issued + Maturity + 
+Cpn,calculate_difference_issue_days, data = pM_unique, method = "nearest", 
+distance = "mahalanobis")
+
+summary(m.post)
+```
+
+
+```{r}
+plot(summary(m.post), abs = F)
+```
+
+
+```{r echo=FALSE, results='hide',message=FALSE}
+Post_matched <- match.data(m.post)
+
+#trying to instantiate an interactive term-confused myself, duhh??? come back later
+Post_matched$did <- Post_matched$time * Post_matched$treated
+Post_matched$after_act <- 1
+```
+
+
+
+```{r}
+#T-test; Post-IRA
+test <- t.test(data = Post_matched, Issue.yield ~ treated, unequal = FALSE)
+test
+```
+
+```{r}
+# Filter the data where 'treated' column equals 1
+filtered_dataG <- Post_matched$Issue.yield[Post_matched$treated == 1]
+
+# Filter the data where 'treated' column equals 0
+filtered_dataB <- Post_matched$Issue.yield[Post_matched$treated == 0]
+density_estimateB <- density(filtered_dataB)
+
+# Plot the density estimate
+plot(density_estimateB, main = "Kernel Density Estimate for Issue Yield (Treated == 0)", xlab = "Issue Yield", ylab = "Density")
+
+density_estimateG <- density(filtered_dataG)
+
+# Plot the density estimate
+plot(density_estimateG, main = "Kernel Density Estimate for Issue Yield (Treated == 1)", xlab = "Issue Yield", ylab = "Density")
+
+plot_range <- range(density_estimateG$x, density_estimateB$x)
+
+# Calculate the difference in density estimates
+difference_density <- density_estimateG$y - density_estimateB$y
+
+# Plot the difference in density estimates
+plot(density_estimateB$x, difference_density, type = "l", col = "blue", main = "Difference in Density Estimate for Issue Yield", xlab = "Issue Yield", ylab = "Density Difference", xlim = plot_range)
+abline(h = 0, col = "red", lty = 2)  # Add horizontal line at y = 0 for reference
+```
+
+```{r}
+#merging matched datasets -> pre-IRA and Post-IRA for regression
+regress_merge <- rbind(matched_data, Post_matched)
+
+#running regression -> QUE???.....
+did_model <- lm(Issue.yield ~ type + Maturity + log.Issued + Cpn + BBG + treated * after_act , data = regress_merge)
+summary(did_model)
+```
+
+```{r}
+#running regression -> QUE???.....
+did_model <- lm(Issue.yield ~ treated + after_act + treated * after_act , data = regress_merge)
+summary(did_model)
+```
+```{r}
+library(tidyverse)
+plot <-ggplot(data = regress_merge) +
+  
+geom_point(aes(x = Issue.Date, y = Issue.yield, color = type)) + 
+  labs(x = "Issue Date", y = "Yield at Issue", title = "Yield at Issue Over Time") +
+          scale_color_manual(values = c("Green" = "green", "Brown" = "brown")) # Set colors for green and brown bonds
+
+
+plot <- plot + scale_x_date(date_breaks = "6 month", date_labels = "%b %Y")
+plot
+```
+
+
+
+
+
+
